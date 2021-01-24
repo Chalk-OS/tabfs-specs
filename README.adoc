@@ -446,7 +446,7 @@ If you want to share your own version of tabfs with other but have reason to not
 Yes, you can always fork this repo and make your own patches. If you want to submit merge/pull request however, your patches must be contained in a file inside the 'offsprings' folder. Why? So others can follow how the foundation spec (this file) influenced it's offsprings, and so on.
 
 ### Q: I have an made an implementation!
-Awesome! If you like you can add a link to the repository (and a short description) to link:++implementations.ad++[] !
+Awesome! If you like you can add a link to the repository (and a short description) to link:++implementations.adoc++[] !
 
 ### Q: Where are whiteouts? What even are they?
 I don't know. I only know that linux supports them. But they seem to only to exists for performance or something.
@@ -482,4 +482,4 @@ include::tabfs-extNameEnt.bytefield[] <4>
 You then only need to run `build_diagrams.rb` to build all diagrams that are referenced with `$AUTOBUILD`!
 
 ### Q: How do I add an implementation?
-Add a link to the repository and a short description to link:++implementations.ad++[]
+Add a link to the repository and a short description to link:++implementations.adoc++[]
