@@ -1,0 +1,10 @@
+(defattrs :bg-green {:fill "#a0ffa0"})
+(defattrs :bg-yellow {:fill "#ffffa0"})
+(defattrs :bg-pink {:fill "#ffb0a0"})
+(defattrs :bg-cyan {:fill "#a0fafa"})
+(defattrs :bg-purple {:fill "#e4b5f7"})
+
+(draw-column-headers)
+(draw-box "index" {:span 4})
+(draw-box "lba" {:span 4})
+(draw-box "version" {:span 8})

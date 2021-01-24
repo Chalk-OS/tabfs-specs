@@ -1,0 +1,478 @@
+:icons: font
+:source-highlighter: rouge
+:toc:
+:toc-placement!:
+:toclevels: 4
+:imagesdir: ./assets
+//$AUTOBUILDOUT assets
+//$AUTOBUILD tabfs-extNameEnt.bytefield
+//$AUTOBUILD tabfs-genericEnt.bytefield
+//$AUTOBUILD tabfs-header.bytefield
+//$AUTOBUILD tabfs-fat.bytefield
+//$AUTOBUILD tabfs-fatEnt.bytefield
+
+# TABFS-28
+
+[caption="",title="This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License",rel="license",link=http://creativecommons.org/licenses/by-sa/4.0/]
+image::https://i.creativecommons.org/l/by-sa/4.0/88x31.png[]
+
+Tabfs is an easy to use / easy to understand fs that is build from osdever(s) for osdever(s)!
+
+toc::[]
+
+## The specification
+
+### TABFS-header
+The first sector of an partition must contain an valid TABFS header:
+
+```
++=================+===============+======+============================================+
+| name            | offset        | size | description                                |
++=================+===============+======+============================================+
+| TABFS_magic     | 445 / 0x1BD   | 16   | "TABFS-28" (zero-terminated)               |
+|                 |               |      | or if you prefer numeric:                  |
+|                 |               |      | 0x1C4: 0x38322D5346424154                  |
+|                 |               |      | 0x1CC: 0x0000000000000000                  |
+|                 |               |      |                                            |
+|                 |               |      | this field is 16 bytes so custom versions  |
+|                 |               |      | have enough space to encode their own magic|
++-----------------+---------------+------+--------------------------------------------+
+| private_data    | 461 / 0x1CD   | 32   | private data; can be used for custom use   |
++-----------------+---------------+------+--------------------------------------------+
+| bat_LBA         | 493 / 0x1ED   | 6    | the LBA of the first block of the BAT      |
++-----------------+---------------+------+--------------------------------------------+
+| blockSize (BS)  | 499 / 0x1F3   | 1    | BlockSize (also refered to as BS)          |
+|                 |               |      | this specifies the size of one block in    |
+|                 |               |      | physical blocks/sectors (512 byte)         |
+|                 |               |      |                                            |
++-----------------+---------------+------+--------------------------------------------+
+| root_LBA        | 500 / 0x1F4   | 6    | the LBA of the first block of the first    |
+|                 |               |      | section of the root entrytable.            |
+|                 |               |      | dependent on the version of TABFS, only    |
+|                 |               |      | the first 28 or all 48 bits are used       |
++-----------------+---------------+------+--------------------------------------------+
+| root_size       | 506 / 0x1FA   | 4    | tablesize; for limitations and usage see   |
+|                 |               |      | directorys; belongs to root_LBA            |
++-----------------+---------------+------+--------------------------------------------+
+| boot-signature  | 510 / 0x1FE   | 2    | 0xAA55, normal x86 boot signature          |
++-----------------+---------------+------+--------------------------------------------+
+```
+
+ifdef::env-github[]
+image::bytefield-tabfs-header.svg[]
+endif::[]
+ifndef::env-github[]
+[bytefield]
+....
+include::tabfs-header.bytefield[]
+....
+endif::[]
+
+NOTE: When refering to an LBA inside this document, its refers to an address with a
+block size as specfied in BS. If the BS is 1 then the LBA behave like "normal" LBA's like these you can use for calls to an ATA drive. But if BS is >1 then the LBA needs to be
+multiplied by BS in order to use it as an LBA for ATA drives and similar! This is because
+the "normal" LBA is 512 based an the BS field changes our LBA to an multiple of 512.
+
+### Block Allocation Table (BAT)
+
+To simply know where free blocks are, tabfs maintains an Block Allocation table or BAT.
+The BAT is an simple bitmap (+ header) in wich an unset bit means the block is free and an set bit
+means the block is used.
+
+The position of an bit for an block, is determined through its lba and the blocksize:
+
+[source,c]
+----
+abs_bitpos = lba * BS;
+
+// relative to an byte
+bytepos = (lba * BS) / 8;
+rel_bitpos = (lba * BS) % 8;  // counted from the left side of an byte; zero means the left most bit in a byte
+----
+
+When implementing this, remember that the further left a bit stands, the higher its numerical value:
+----
+0b10000000 = 0x80 = 128
+----
+
+An BAT is build as following:
+```
++=================+========+==============+============================================+
+| name            | offset | size         | description                                |
++=================+========+==============+============================================+
+| next_bat        | 0      | 4            | first block of the next section of the bat |
++-----------------+--------+--------------+--------------------------------------------+
+| block_count (N) | 4      | 2            | how many blocks this BAT section spans     |
++-----------------+--------+--------------+--------------------------------------------+
+| BAT_data        | 6      | BS - 6       | bitmap data                                |
+|                 |        | + ((N-1)*BS) |                                            |
++-----------------+--------+--------------+--------------------------------------------+
+```
+
+The BAT uses at total 32MB of space (with an blocksize of 512), wich enables devices/partitions up to 128GB.
+
+### Entrytables
+
+Each directory as an entrytable which consits of entrys with the following format:
+
+```
++=================+========+=======+============================================+
+| name            | offset | size  | description                                |
++=================+========+=======+============================================+
+| flags           | 0      | 2     | flags for this entry:                      |
+|                 |        |       | TTTTUGSAAAAAAAAA                           |
+|                 |        |       | - A = acl                                  |
+|                 |        |       |   - RWX:U RWX:G RWX:O (hi to low)          |
+|                 |        |       | - S = sticky bit                           |
+|                 |        |       | - U/G = set-user-id/set-group-id bit       |
+|                 |        |       | - T = type                                 |
+|                 |        |       |   - 0: unknown / entry is not valid        |
+|                 |        |       |   - 1: directory                           |
+|                 |        |       |   - 2: regular FAT file                    |
+|                 |        |       |        uses a FAT to track blocks          |
+|                 |        |       |   - 3: regular segmented file              |
+|                 |        |       |        uses segment headers                |
+|                 |        |       |   - 4: char device                         |
+|                 |        |       |   - 5: blk device                          |
+|                 |        |       |   - 6: fifo                                |
+|                 |        |       |   - 7: link                                |
+|                 |        |       |   - 8: socket                              |
+|                 |        |       |   - 9: continuous file                     |
+|                 |        |       |        file is just one a group of blocks  |
+|                 |        |       |   - A: long name                           |
+|                 |        |       |   - B-D: not used; free for extensions!    |
+|                 |        |       |   - E: next-link entry                     |
+|                 |        |       |   - F: kernel; is a continuous file        |
++-----------------+--------+-------+--------------------------------------------+
+| ctime           | 2      | 8     | creating time as a u64 timestamp           |
++-----------------+--------+-------+--------------------------------------------+
+| mtime           | 10     | 8     | modify time as a u64 timestamp             |
++-----------------+--------+-------+--------------------------------------------+
+| atime           | 18     | 8     | access time as a u64 timestamp             |
++-----------------+--------+-------+--------------------------------------------+
+| uid             | 26     | 4     | u32 userid                                 |
++-----------------+--------+-------+--------------------------------------------+
+| gid             | 30     | 4     | u32 groupid                                |
++-----------------+--------+-------+--------------------------------------------+
+| data            | 34     | 8     | usage depents on the type:                 |
+|                 |        |       | - dir/file/kernel/next-link:               |
+|                 |        |       |   - LBA 28 of first block                  |
+|                 |        |       |   - 32bit file-/tablesize in bytes         |
+|                 |        |       | - char/blk-dev:                            |
+|                 |        |       |   - 32bit device id                        |
+|                 |        |       |   - 32bit device flags                     |
+|                 |        |       | - sock: ipv4 address / socket serial num   |
+|                 |        |       | - link:                                    |
+|                 |        |       |   - LBA 28 of the entrytable               |
+|                 |        |       |   - 32 bit offset in bytes                 |
+|                 |        |       | - fifo:                                    |
+|                 |        |       |   - 32bit buffer size in bytes             |
++-----------------+--------+-------+--------------------------------------------+
+| name            | 42     | 22    | zero-terminated name of the entry          |
++-----------------+--------+-------+--------------------------------------------+
+```
+
+ifdef::env-github[]
+image::bytefield-tabfs-genericEnt.svg[]
+endif::[]
+ifndef::env-github[]
+[bytefield]
+....
+include::tabfs-genericEnt.bytefield[]
+....
+endif::[]
+
+An entry table can at max have 67.108.864 entrys (across links). This limitation
+comes from the 32bit offset for links. However this would occupy 4GB of space per full directory!
+
+Implementation Tip:
+Because 4GB only for entrys in an folder is way to much for an hobby OS, its better
+to reduce the number of allowed entries; an hard max of 65.536 entrys (16bit offset) per table should
+be enough. With this the maximum amount of space one entrytable can occupy is 4MB.
+
+#### Directories
+The type of entry that allows us to build a tree.
+Its data field is a LBA 28 of the first block of an entrytable and the bytesize
+of this first table; the size must be divideable through `512*BS`.
+
+#### FAT files
+These files use an File Allocation Table or FAT to store the addresses to their
+blocks. One FAT-file has one FAT. FAT-files allow a file history.
+
+An FAT has the following format:
+```
++=================+========+============+=======================================+
+| name            | offset | size       | description                           |
++=================+========+============+=======================================+
+| next_section    | 0      | 4          | LBA 28 of the first block of the next |
+|                 |        |            | section                               |
++-----------------+--------+------------+---------------------------------------+
+| size (N)        | 4      | 2          | count of blocks that belongs to the   |
+|                 |        |            | current FAT                           |
++-----------------+--------+------------+---------------------------------------+
+| unused          | 6      | 10         | unused                                |
++-----------------+--------+------------+---------------------------------------+
+| entries         | 6      | 496        | the entries                           |
+|                 |        | +(N*512)   |                                       |
++-----------------+--------+------------+---------------------------------------+
+```
+
+ifdef::env-github[]
+image::bytefield-tabfs-fat.svg[] 
+endif::[]
+ifndef::env-github[]
+[bytefield]
+....
+include::tabfs-fat.bytefield[]
+....
+endif::[]
+
+An entry in a FAT looks like this:
+```
++=================+========+============+=======================================+
+| name            | offset | size       | description                           |
++=================+========+============+=======================================+
+| index           | 0      | 4          | index (in blocks) at which the block  |
+|                 |        |            | provide data for the file             |
++-----------------+--------+------------+---------------------------------------+
+| lba             | 4      | 4          | lba28 of the block                    |
++-----------------+--------+------------+---------------------------------------+
+| modifiy_date    | 9      | 8          | date at wich a modification has       |
+|                 |        |            | created this entry                    |
++-----------------+--------+------------+---------------------------------------+
+```
+
+ifdef::env-github[]
+image::bytefield-tabfs-fatEnt.svg[] 
+endif::[]
+ifndef::env-github[]
+[bytefield]
+....
+include::tabfs-fatEnt.bytefield[]
+....
+endif::[]
+
+The file history functions are based of the principle that we have versioned blocks.
+First we need to find out which version we want. This is done by picking an timestamp
+at wich you want to view the content of an file.
+
+NOTE: The file history functionality only works for reading. Writing is always done
+on the latest version; but you can revert the file to an point in the past.
+
+Then we traverse the FAT until we find an entry with index 0 and an matched version.
+If no exact match is found, the next lower version is used. This block `lba` can now
+be used for the first 512 bytes of the file. We repeat the proccess for every block 
+we want to read from the file.
+
+The revert function is done by picking an timestamp and deleting all entrys in the FAT
+that have an modify date grater than that what we picked.
+
+NOTE: The file history is not a tradditional COW, for example you cannot reference
+the same block in difference files. The limitation here is not the FAT: its the BAT,
+because we have no way to indicate that an given block has more than one user.
+
+#### Segmented files
+These files uses an segment header at the start of each segment to link the segments
+of the file together. Because this header consumes space inside the block, the first
+block of an segment contains always less then 512 bytes of space for file data.
+
+The data field is nearly the same as in regular FAT files:
+
+- an LBA 28 to the first block of the first segment
+- u32 filesize in bytes
+
+```
++=================+========+============+=======================================+
+| name            | offset | size       | description                           |
++=================+========+============+=======================================+
+| lba_next        | 0      | 4          | LBA 28 of the next block;             |
+|                 |        |            | 0 if no more segments                 |
++-----------------+--------+------------+---------------------------------------+
+| count           | 4      | 1          | count of blocks (including this one)  |
+|                 |        |            | that belongs to this segment          |
++-----------------+--------+------------+---------------------------------------+
+| data            | 5      | 507        | file content data                     |
+|                 |        | +((N-1) *  |                                       |
+|                 |        |  (512*BS)) |                                       |
++-----------------+--------+------------+---------------------------------------+
+```
+
+#### Continuous files
+These are regular files but with a twist:
+their data is one continous range of blocks. No link traservel or other trickery!
+These files are good for huge data or generally for data that needs to be read from on
+multiple locations inside the file.
+
+They are also fairly easily to implement.
+
+Continuous files are good for images for vm's and such or for database files.
+But there is one big disadvantage of continous files: they cannot grow.
+
+NOTE: You can try and re-balance the entire fs to make space, or move the blocks
+into areas on the harddrive where a wider range of blocks is available, but the
+standard specs dosnt require not deny this.
+
+Their data field consists of:
+
+- an LBA 28 for the first block
+- a u32 filesize in bytes
+
+The blockcount for this file is calculated through the filesize:
+```
+blockCount = ((fileSize / 512) + ( (fileSize % 512) > 0 ? 1 : 0 )) / BS;
+```
+
+#### (char- and block-) device files
+They are special files that reference a device in the system, wich are in linux typically found inside of '/dev'! Their data field is split into two u32: one for
+the device id, and one for additional flags.
+
+#### fifo, socket
+Just what their name says:
+
+- fifo  : first-in-first-out; data field contains the buffer size of the fifo
+- socket: either an unix-socket (or named pipe) or an tcp4 socket file. The later is 
+          not required.
+
+#### link (or symlink)
+An symlink links to another entry inside the filesystem.
+Their data consists of an LBA 28 that points to the first block of an entrytable
+as well as an offset into this entrytable.
+
+NOTE: It dosn't neccessarily need to be the first block of an entrytable; but some
+      performance and cache strategies may only work when useing the first block.
+
+#### kernel
+This is just an alias for an continous files; but its id can be used by an custom
+bootstrap/bootloader code to quickly find the kernel file.
+
+Thats also why the kernel file needs to be in the first block of the root
+entrytable!
+
+#### next-link entry
+An special entry in each section of an entrytable to specify the next section of an
+entrytable! The data field contains an LBA 28 for the first block of the next section,
+as well as an u32 tablesize (same restrictions and usage as for the directories).
+
+Should be the first entry in each entrytable, so we dont need to search if we want
+more sections.
+
+#### long name
+Another special entry: this time its used to allow for longer names!
+To use this extension, instead of writing the entry name into the name field of an entry, we create an long-name entry.
+Its built like this:
+
+```
++=================+========+=======+============================================+
+| name            | offset | size  | description                                |
++=================+========+=======+============================================+
+| flags           | 0      | 1     | flags for this entry:                      |
+|                 |        |       | TTTT---                                    |
++-----------------+--------+-------+--------------------------------------------+
+| name            | 1      | 63    | zero-terminated name                       |
++-----------------+--------+-------+--------------------------------------------+
+```
+
+To use it, we change the <name> field in the normal entry from an simple 22 byte long zero-terminated string into:
+
+```
+| ...                                                                           |
++-----------------+--------+-------+--------------------------------------------+
+| name_old        | 42     | 17    | not used by the extension; free to use     |
++-----------------+--------+-------+--------------------------------------------+
+| longname-offset | 59     | 4     | offset into the entrytable to the          |
+|                 |        |       | long-name-ext                              |
++-----------------+--------+-------+--------------------------------------------+
+| longname-byte   | 63     | 1     | non-zero; indicates that a long-name-ext   |
+|                 |        |       | is used!                                   |
++-----------------+--------+-------+--------------------------------------------+
+```
+ifdef::env-github[]
+image::bytefield-tabfs-extNameEnt.svg[]
+endif::[]
+ifndef::env-github[]
+[bytefield]
+....
+include::tabfs-extNameEnt.bytefield[]
+....
+endif::[]
+
+## FAQ-ish
+(not really frequently asked but you know, just to be save)
+
+### Q: Why are there so many (3) regular file types? which should i really use as regular file?
+
+Tabfs is designed for osdev-ing. all 3 types work differently, and people have different difficulty to understand each of them. Also: tabfs is NOT designed that you implement all features (especially the types). Just pick what you think its best. And: try out! odev-ing is (at least for me) an project where you can try everything in your own peace.
+
+### Q: Why is there an extra type of entry for the kernel?
+A: Tabfs is also designed in mind that osdever's might want to use or write their own bootstrap code. I personally even recommend to do so, so you can understand the x86 boot sequence better! And because bootstrap/bootloader code tends to be assembler heavy and you might dont want to implement device drivers and an stub fs-driver for your bootloader, tabfs has a kernel type. Its easier just to search the first block of the root entrytabe after 0xF?.
+
+### Q: Why LBA 28? why not LBA 48?
+With LBA 28 and an blocksize of 512 we can address 128GB of space. I doubt that any osdever ever generate an imgage this big. And LBA 28 (or better: 32 bit / 4 byte) fitted more nicely into the structures when i first designed this filesystem. Note however that the TABFS header already supports LBA 48, so an future TABFS-48 is not from the table :3 And you can always increase your BS field at the creation so you can have access to more blocks. Note however that this does not change per-file-limitations!
+
+### Q: Why 64bit timestamps? are 32bit not enough for osdev purposes?
+https://en.wikipedia.org/wiki/Year_2038_problem
+
+### Q: Where comes the name "tabfs" from?
+Its comes form its first implementation: an simple 1-sector big table with 32 byte entrys. However, given its simple structure it's only supported continious files. No special files, not even directorys. So i reworked it into this.
+
+### Q: Can i use tabfs in my (commercial) project(s)?
+See the link:LICENSE[] for detailed information!
+
+TL;DR: the specifications for tabfs are licensed under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). This means that you can share and adapt this specifications how you like, but you must give appropriate credit if you do so.
+
+[WARNING]
+Disclaimer: this FAQ does NOT replace the link:LICENSE[] file. Please read the link:LICENSE[] file and all linked ressources in it for the full license.
+
+### Q: Under what license are the other files?
+All files have the same license as mentioned above: CC BY-SA 4.0 (see link:LICENSE[])
+
+### Q: How stable is it?
+I don't know to be honest, but I appreciate any help to proof if it is or not. (But you might head over to one of the implementations)
+
+### Q: Are there utils or reference implementations?
+Not yet, but I'am working on it; when they're ready I will link them here!
+
+### Q: For what purpose is the 'offsprings' folder?
+If you want to share your own version of tabfs with other but have reason to not make a own repo, you can make a pr with an new file with your own version inside this folder. And so osdever's that stumple uppon this system can maybe look into what others have suggested how the fs could work differently.
+
+### Q: Can I help to improve the specs?
+Yes, you can always fork this repo and make your own patches. If you want to submit merge/pull request however, your patches must be contained in a file inside the 'offsprings' folder. Why? So others can follow how the foundation spec (this file) influenced it's offsprings, and so on.
+
+### Q: I have an made an implementation!
+Awesome! If you like you can add a link to the repository (and a short description) to link:++implementations.ad++[] !
+
+### Q: Where are whiteouts? What even are they?
+I don't know. I only know that linux supports them. But they seem to only to exists for performance or something.
+
+### Q: How do I add an offspring?
+Simple: make a new directory (when you have own diagramms) or file in the offspring folder. If you do have diagramms, please add some autobuild comments:
+[source]
+----
+:imagesdir: ./assets
+//$AUTOBUILDOUT assets <1>
+//$AUTOBUILD tabfs-extNameEnt.bytefield <2>
+//$AUTOBUILD tabfs-genericEnt.bytefield
+//$AUTOBUILD tabfs-header.bytefield
+
+// ...
+
+\ifdef::env-github[]
+image::bytefield-tabfs-extNameEnt.svg[] <3>
+\endif::[]
+\ifndef::env-github[]
+[bytefield]
+....
+include::tabfs-extNameEnt.bytefield[] <4>
+....
+\endif::[]
+
+----
+<1> This sets the output dir for the generated diagramms; you also then want to set `:imagesdir:`
+<2> This tells the build-util that the file `tabfs-extNameEnt.bytefield` should be read, and send to kroki as the type `bytefield`. The resulting SVG file will be saved as: `assets/bytefield-tabfs-extNameEnt.svg`.
+<3> Reference the generated svg file! But only when we are on github.
+<4> If we are non-github (local), we simply can use kroki directly via an addon (`asciidoctor-kroki`).
+
+You then only need to run `build_diagrams.rb` to build all diagrams that are referenced with `$AUTOBUILD`!
+
+### Q: How do I add an implementation?
+Add a link to the repository and a short description to link:++implementations.ad++[]

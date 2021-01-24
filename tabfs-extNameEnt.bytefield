@@ -1,0 +1,31 @@
+(defattrs :bg-green {:fill "#a0ffa0"})
+(defattrs :bg-yellow {:fill "#ffffa0"})
+(defattrs :bg-pink {:fill "#ffb0a0"})
+(defattrs :bg-cyan {:fill "#a0fafa"})
+(defattrs :bg-purple {:fill "#e4b5f7"})
+
+(draw-column-headers)
+(draw-box "flags" {:span 2})
+(draw-box "ctime" {:span 8})
+(draw-box (text "mtime" [:math] [:sub "lo"]) [:box-first :bg-yellow {:span 6}])
+
+(draw-box (text "mtime" [:math] [:sub "hi"]) [:box-last :bg-yellow {:span 2}])
+(draw-box "atime" {:span 8})
+(draw-box "uid" {:span 4})
+(draw-box (text "gid" [:math] [:sub "lo"]) [:box-first :bg-green {:span 2}])
+
+(draw-box (text "gid" [:math] [:sub "hi"]) [:box-last :bg-green {:span 2}])
+(draw-box "data" {:span 8})
+(draw-box nil [:box-above :bg-purple {:span 6}])
+
+(draw-box "unused" [:bg-purple {
+    :span 10
+    :borders {
+        :left :border-unrelated
+        :top :border-unrelated
+        :bottom :border-unrelated
+    }
+}])
+(draw-box nil [:bg-purple {:borders { :right :border-unrelated :bottom :border-unrelated }}])
+(draw-box "longName-offset" [:bg-cyan :box-first {:span 4}])
+(draw-box (text ">0") [:bg-cyan :box-last])

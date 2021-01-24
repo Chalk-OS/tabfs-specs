@@ -1,0 +1,69 @@
+(defattrs :bg-green {:fill "#a0ffa0"})
+(defattrs :bg-yellow {:fill "#ffffa0"})
+(defattrs :bg-pink {:fill "#ffb0a0"})
+(defattrs :bg-cyan {:fill "#a0fafa"})
+(defattrs :bg-purple {:fill "#e4b5f7"})
+
+(def g_gap_count 0)
+
+(defn row-header-fn
+    [{:keys [address gap?]}]
+    (let [
+            defs        ()
+            attr-spec   (:row-header defs)
+            hex         (merge (:hex defs) {
+                                :font-size 11
+                                :font-style "normal"
+                                :dominant-baseline "middle"}
+                            attr-spec)
+            math        (merge (:math defs) 
+                            (select-keys hex [:font-size :dominant-baseline])
+                        )
+        ]
+        (if gap?
+            (def g_gap_count (+ g_gap_count 1))
+        )
+        (if (> g_gap_count 1)
+            ; g_gap_count is 1+
+            (hex-text (+ address 432) 2 hex)
+
+            ; g_gap_count is 0
+            (if gap? (text "") (hex-text address 2 hex))
+        )
+    )
+)
+
+(draw-column-headers)
+(draw-gap "bootCode")
+
+(draw-box nil [:box-below {:span 13}])
+(draw-box (text "magic" [:math] [:sub "lo"]) [:bg-green :box-first {:span 3}])
+
+(draw-box (text "magic" [:math] [:sub "hi"]) [:bg-green :box-last {
+    :span 13
+}])
+(draw-box nil [:bg-cyan {
+    :span 3
+    :borders {
+        :top :border-unrelated
+        :right :border-unrelated
+        :left :border-unrelated }
+}])
+
+(draw-box "private" [:bg-cyan {
+    :span 13
+    :borders { :left :border-unrelated :top :border-unrelated }
+}])
+(draw-box nil [:bg-cyan {:span 3 :borders { :right :border-unrelated }}])
+
+(draw-box nil [:bg-cyan :box-below {:span 13}])
+(draw-box (text "BAT LBA" [:math] [:sub "lo"]) [:bg-pink :box-first {
+    :span 3
+}])
+
+(draw-box (text "BAT LBA" [:math] [:sub "hi"]) [:bg-pink :box-last {:span 3}])
+(draw-box (text "BS" ) [{:span 1}])
+(draw-box (text "root LBA") [:bg-yellow :box-first {:span 6}])
+(draw-box (text "root-size") [:bg-yellow :box-last {:span 4}])
+(draw-box (hex-text 0x55 2 :bold) [:box-first :bg-purple])
+(draw-box (hex-text 0xAA 2 :bold) [:box-last :bg-purple])

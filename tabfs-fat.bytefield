@@ -1,0 +1,13 @@
+(defattrs :bg-green {:fill "#a0ffa0"})
+(defattrs :bg-yellow {:fill "#ffffa0"})
+(defattrs :bg-pink {:fill "#ffb0a0"})
+(defattrs :bg-cyan {:fill "#a0fafa"})
+(defattrs :bg-purple {:fill "#e4b5f7"})
+
+(draw-column-headers)
+(draw-box "Next Section lba" {:span 4})
+(draw-box "size" {:span 2})
+(draw-box "unused" {:span 10})
+
+(draw-gap "entries")
+(draw-bottom)
