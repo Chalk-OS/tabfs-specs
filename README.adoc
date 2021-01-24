@@ -4,6 +4,13 @@
 :toc-placement!:
 :toclevels: 4
 :imagesdir: ./assets
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]
 //$AUTOBUILDOUT assets
 //$AUTOBUILD tabfs-extNameEnt.bytefield
 //$AUTOBUILD tabfs-genericEnt.bytefield
