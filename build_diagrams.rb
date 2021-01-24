@@ -5,6 +5,7 @@
 
 require 'net/http'
 require 'json'
+require 'nokogiri'
 
 kroki_url = ENV["KROKI_URL"] || "https://kroki.io";
 if (!kroki_url.start_with?("http")) then
@@ -67,7 +68,26 @@ def build_diagrams(ad_file)
         if (response.code != "200") then
             puts "Failed to build #{graphfile}! kroki response: #{response.code}"
         else
-            IO.write(out_file, response.body);
+            svg_code = response.body;
+            if (type == "bytefield") then
+                svg = Nokogiri.parse(svg_code);
+
+                # add an white background so darkmode dont make the image unreadable
+                svg.at('svg').children.first.add_previous_sibling('<rect width="100%" height="100%" fill="white"/>');
+
+                # make a little more space at both axes so the lines are more visible
+                w = svg.at('svg').get_attribute("width").to_i + 10;
+                svg.at('svg').set_attribute("width", w.to_s);
+
+                h = svg.at('svg').get_attribute("height").to_i + 10;
+                svg.at('svg').set_attribute("height", h.to_s);
+
+                svg.at('svg').set_attribute("viewBox", "0 0 #{w} #{h}");
+
+                svg_code = svg.to_xml();
+            end
+
+            IO.write(out_file, svg_code);
         end
     end
 end
