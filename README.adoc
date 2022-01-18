@@ -36,7 +36,7 @@ The first sector of an partition must contain an valid TABFS header:
 +=================+===============+======+============================================+
 | name            | offset        | size | description                                |
 +=================+===============+======+============================================+
-| TABFS_magic     | 445 / 0x1BD   | 16   | "TABFS-28" (zero-terminated)               |
+| TABFS_magic     | 445 / 0x1B7   | 16   | "TABFS-28" (zero-terminated)               |
 |                 |               |      | or if you prefer numeric:                  |
 |                 |               |      | 0x1C4: 0x38322D5346424154                  |
 |                 |               |      | 0x1CC: 0x0000000000000000                  |
@@ -44,9 +44,12 @@ The first sector of an partition must contain an valid TABFS header:
 |                 |               |      | this field is 16 bytes so custom versions  |
 |                 |               |      | have enough space to encode their own magic|
 +-----------------+---------------+------+--------------------------------------------+
-| private_data    | 461 / 0x1CD   | 32   | private data; can be used for custom use   |
+| private_data    | 461 / 0x1C7   | 32   | private data; can be used for custom use   |
 +-----------------+---------------+------+--------------------------------------------+
-| bat_LBA         | 493 / 0x1ED   | 6    | the LBA of the first block of the BAT      |
+| bat_LBA         | 493 / 0x1E7   | 6    | the LBA of the first block of the BAT      |
++-----------------+---------------+------+--------------------------------------------+
+| max_LBA         | 493 / 0x1ED   | 6    | the max LBA (inclusive) that is allowed to |
+|                 |               |      | be used by tabfs                           |
 +-----------------+---------------+------+--------------------------------------------+
 | blockSize (BS)  | 499 / 0x1F3   | 1    | BlockSize (also refered to as BS)          |
 |                 |               |      | this specifies the size of one block in    |
@@ -117,6 +120,12 @@ An BAT is build as following:
 ```
 
 The BAT uses at total 32MB of space (with an blocksize of 512), wich enables devices/partitions up to 128GB.
+
+NOTE: To find out when to stop allocating BAT regions (i.e. your drive/partition is going to be full), you can use the max_LBA
+field from the header.
+
+NOTE: When implementing this, one might find it easier to allocate the BAT completly when creating the filesystem, since you then
+dosnt get into the position of needing an algorithm that ansures that you always have an BAT to find an free block.
 
 ### Entrytables
 
