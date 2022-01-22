@@ -3,6 +3,8 @@
 (defattrs :bg-pink {:fill "#ffb0a0"})
 (defattrs :bg-cyan {:fill "#a0fafa"})
 (defattrs :bg-purple {:fill "#e4b5f7"})
+(defattrs :bg-gray {:fill "#cccccc"})
+(defattrs :bg-dgray {:fill "#4a4a4a"})
 
 (def g_gap_count 0)
 
@@ -25,7 +27,7 @@
         )
         (if (> g_gap_count 1)
             ; g_gap_count is 1+
-            (hex-text (+ address 432) 2 hex)
+            (hex-text (+ address 448) 2 hex)
 
             ; g_gap_count is 0
             (if gap? (text "") (hex-text address 2 hex))
@@ -33,37 +35,43 @@
     )
 )
 
+(def svg-attrs {:style "background-color: white"})
+(def right-margin 8)
+(def bottom-margin 8)
+
 (draw-column-headers)
 (draw-gap "bootCode")
 
-(draw-box nil [:box-below {:span 13}])
-(draw-box (text "magic" [:math] [:sub "lo"]) [:bg-green :box-first {:span 3}])
+;(draw-box nil [:box-below {:span 6}])
+(draw-box (text "magic") [:bg-green {:span 16}])
 
-(draw-box (text "magic" [:math] [:sub "hi"]) [:bg-green :box-last {
-    :span 13
-}])
-(draw-box nil [:bg-cyan {
-    :span 3
+;(draw-box (text "magic" [:math] [:sub "hi"]) [:bg-green :box-last { :span 6 }])
+(draw-box "private" [:bg-cyan {
+    :span 16
     :borders {
         :top :border-unrelated
         :right :border-unrelated
         :left :border-unrelated }
 }])
 
-(draw-box "private" [:bg-cyan {
-    :span 13
-    :borders { :left :border-unrelated :top :border-unrelated }
-}])
-(draw-box nil [:bg-cyan {:span 3 :borders { :right :border-unrelated }}])
-
-(draw-box nil [:bg-cyan :box-below {:span 13}])
-(draw-box (text "BAT LBA" [:math] [:sub "lo"]) [:bg-pink :box-first {
-    :span 3
+(draw-box nil [:bg-cyan {
+    :span 16
+    :borders {
+        :left :border-unrelated
+        :right :border-unrelated
+        :bottom :border-unrelated }
 }])
 
-(draw-box (text "BAT LBA" [:math] [:sub "hi"]) [:bg-pink :box-last {:span 3}])
-(draw-box (text "BS" ) [{:span 1}])
-(draw-box (text "root LBA") [:bg-yellow :box-first {:span 6}])
-(draw-box (text "root-size") [:bg-yellow :box-last {:span 4}])
+; (draw-box "unused" [:bg-dgray {:span 4}])
+; (draw-box (text "BAT LBA" ) [:bg-pink {:span 6}])
+; (draw-box (text "max LBA" ) [:bg-pink {:span 6}])
+
+(draw-box (text "flags" ) [:bg-gray {:span 2}])
+
+;(draw-box nil [{:span 2}])
+;(draw-box (text "BS" ) [:bg-gray {:span 1}])
+(draw-padding 0x36)
+
+(draw-box (text "info LBA") [:bg-yellow :box-first {:span 8}])
 (draw-box (hex-text 0x55 2 :bold) [:box-first :bg-purple])
 (draw-box (hex-text 0xAA 2 :bold) [:box-last :bg-purple])

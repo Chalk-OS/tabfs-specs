@@ -17,6 +17,7 @@ endif::[]
 //$AUTOBUILD tabfs-header.bytefield
 //$AUTOBUILD tabfs-fat.bytefield
 //$AUTOBUILD tabfs-fatEnt.bytefield
+//$AUTOBUILD tabfs-volumeInfo.bytefield
 
 # TABFS-28
 
@@ -36,33 +37,27 @@ The first sector of an partition must contain an valid TABFS header:
 +=================+===============+======+============================================+
 | name            | offset        | size | description                                |
 +=================+===============+======+============================================+
-| TABFS_magic     | 445 / 0x1B7   | 16   | "TABFS-28" (zero-terminated)               |
+| TABFS_magic     | 448 / 0x1C0   | 16   | "TABFS-28" (zero-terminated)               |
 |                 |               |      | or if you prefer numeric:                  |
-|                 |               |      | 0x1C4: 0x38322D5346424154                  |
-|                 |               |      | 0x1CC: 0x0000000000000000                  |
+|                 |               |      | 0x1C0: 0x38322D5346424154                  |
+|                 |               |      | 0x1C8: 0x0000000000000000                  |
 |                 |               |      |                                            |
-|                 |               |      | this field is 16 bytes so custom versions  |
+|                 |               |      | This field is 16 bytes, so custom versions |
 |                 |               |      | have enough space to encode their own magic|
 +-----------------+---------------+------+--------------------------------------------+
-| private_data    | 461 / 0x1C7   | 32   | private data; can be used for custom use   |
+| private_data    | 464 / 0x1D0   | 32   | Private data; can be used for custom use   |
 +-----------------+---------------+------+--------------------------------------------+
-| bat_LBA         | 493 / 0x1E7   | 6    | the LBA of the first block of the BAT      |
+| flags           | 496 / 0x1F0   | 2    | Flags for the filesystem:                  |
+|                 |               |      |   00000000 0000000A                        |
+|                 |               |      | A: If set, the lba's of the filesystem     |
+|                 |               |      |    are absolute; if cleared, they are      |
+|                 |               |      |    partition based                         |
 +-----------------+---------------+------+--------------------------------------------+
-| max_LBA         | 493 / 0x1ED   | 6    | the max LBA (inclusive) that is allowed to |
-|                 |               |      | be used by tabfs                           |
+|                 | 498 / 0x1F2   | 4    | Four unused bytes                          |
 +-----------------+---------------+------+--------------------------------------------+
-| blockSize (BS)  | 499 / 0x1F3   | 1    | BlockSize (also refered to as BS)          |
-|                 |               |      | this specifies the size of one block in    |
-|                 |               |      | physical blocks/sectors (512 byte)         |
-|                 |               |      |                                            |
-+-----------------+---------------+------+--------------------------------------------+
-| root_LBA        | 500 / 0x1F4   | 6    | the LBA of the first block of the first    |
-|                 |               |      | section of the root entrytable.            |
-|                 |               |      | dependent on the version of TABFS, only    |
-|                 |               |      | the first 28 or all 48 bits are used       |
-+-----------------+---------------+------+--------------------------------------------+
-| root_size       | 506 / 0x1FA   | 4    | tablesize; for limitations and usage see   |
-|                 |               |      | directorys; belongs to root_LBA            |
+| info_LBA        | 500 / 0x1F6   | 8    | The LBA of the volume information block.   |
+|                 |               |      | Dependent on the version of TABFS, only    |
+|                 |               |      | the first 28 or 48 bits are used           |
 +-----------------+---------------+------+--------------------------------------------+
 | boot-signature  | 510 / 0x1FE   | 2    | 0xAA55, normal x86 boot signature          |
 +-----------------+---------------+------+--------------------------------------------+
@@ -78,10 +73,86 @@ include::tabfs-header.bytefield[]
 ....
 endif::[]
 
-NOTE: When refering to an LBA inside this document, its refers to an address with a
-block size as specfied in BS. If the BS is 1 then the LBA behave like "normal" LBA's like these you can use for calls to an ATA drive. But if BS is >1 then the LBA needs to be
-multiplied by BS in order to use it as an LBA for ATA drives and similar! This is because
-the "normal" LBA is 512 based an the BS field changes our LBA to an multiple of 512.
+### Volume Information Block
+
+```
++=================+===============+======+============================================+
+| name            | offset        | size | description                                |
++=================+===============+======+============================================+
+| TABFS_magic     | 0x0000        | 16   | "TABFS-28" (zero-terminated)               |
+|                 |               |      | or if you prefer numeric:                  |
+|                 |               |      | 0x000: 0x38322D5346424154                  |
+|                 |               |      | 0x008: 0x0000000000000000                  |
+|                 |               |      |                                            |
+|                 |               |      | This field is 16 bytes, so custom versions |
+|                 |               |      | have enough space to encode their own magic|
+|                 |               |      |                                            |
+|                 |               |      | This is actually a copy of the magic found |
+|                 |               |      | in the header inside the bootsector        |
++-----------------+---------------+------+--------------------------------------------+
+| bat_LBA         | 0x0010        | 4    | The LBA 28 of the first block of the BAT   |
++-----------------+---------------+------+--------------------------------------------+
+| min_LBA         | 0x0014        | 4    | The min LBA of the filesystem, including   |
+|                 |               |      | any preload (this info section, bootloader |
+|                 |               |      | or else)                                   |
++-----------------+---------------+------+--------------------------------------------+
+| bat_start_LBA   | 0x0018        | 4    | The first LBA the BAT is allowed to use    |
++-----------------+---------------+------+--------------------------------------------+
+| max_LBA         | 0x001C        | 4    | The max LBA (inclusive) that is allowed to |
+|                 |               |      | be used by tabfs. It's also the max LBA    |
+|                 |               |      | that an BAT can hold informations about    |
++-----------------+---------------+------+--------------------------------------------+
+| blockSize       | 0x0020        | 4    | The absolute bytesize of an block.         |
+|                 |               |      | For example: for ATA this would be 512     |
+|                 |               |      | This size must not be the physical size,   |
+|                 |               |      | but it should be an multiple of it.        |
++-----------------+---------------+------+--------------------------------------------+
+| BS              | 0x0024        | 1    | Count of multiplies of an physical block   |
+|                 |               |      | to make an block. Used to calculate LBA's  |
++-----------------+---------------+------+--------------------------------------------+
+|                 | 0x0025        | 1    | Unused byte                                |
++-----------------+---------------+------+--------------------------------------------+
+| flags           | 0x0026        | 2    | Flags for the filesystem:                  |
+|                 |               |      |   00000000 0000000A                        |
+|                 |               |      | A: if set, the lba's of the filesystem     |
+|                 |               |      |    are absolute; if cleared, they are      |
+|                 |               |      |    partition based                         |
+|                 |               |      |                                            |
+|                 |               |      | This is actually a copy of the flags found |
+|                 |               |      | in the header inside the bootsector        |
++-----------------+---------------+------+--------------------------------------------+
+| root_LBA        | 0x0028        | 4    | The LBA of the first block of the first |
+|                 |               |      | section of the root entrytable.            |
++-----------------+---------------+------+--------------------------------------------+
+| root_size       | 0x002C        | 4    | tablesize; for limitations and usage see   |
+|                 |               |      | directorys; belongs to root_LBA            |
++-----------------+---------------+------+--------------------------------------------+
+|                 | 0x0030        | 32   | Reserved for future usage                  |
++-----------------+---------------+------+--------------------------------------------+
+| volume_label    | 0x0050        | 176  | Zero-terminated string of the label for    |
+|                 |               |      | this volume.                               |
++-----------------+---------------+------+--------------------------------------------+
+| private data    | 0x0100        | 256  | Private data; can be used for custom use   |
++-----------------+---------------+------+--------------------------------------------+
+```
+
+ifdef::env-github[]
+image::bytefield-tabfs-volumeInfo.svg[]
+endif::[]
+ifndef::env-github[]
+[bytefield]
+....
+include::tabfs-volumeInfo.bytefield[]
+....
+endif::[]
+
+IMPORTANT: The fields `BS` and `blockSize` are linked together. This means they must not contain data that contradict each other.
+This means, if `BS` is `1` then `blockSize` should be `1 * <physical block size>`. If `BS` is `2`, `2 * <physical block size>`
+and so on. For example, if we have an physical block size of `512` (like ATA drives / HDD's mostly have), this means by an `BS` of `2`,
+we have an `blockSize` of `1024`.
+
+IMPORTANT: When refering to an LBA inside this document, its refers to an address with a block size as specfied in `blockSize`.
+You can obtain the "real" LBA, by multipling it with `BS`. The result can then be used to access the data from the physical device.
 
 ### Block Allocation Table (BAT)
 
@@ -89,15 +160,15 @@ To simply know where free blocks are, tabfs maintains an Block Allocation table 
 The BAT is an simple bitmap (+ header) in wich an unset bit means the block is free and an set bit
 means the block is used.
 
-The position of an bit for an block, is determined through its lba and the blocksize:
+The position of an bit for an block, is determined through its LBA:
 
 [source,c]
 ----
-abs_bitpos = lba * BS;
+abs_bitpos = lba;
 
 // relative to an byte
-bytepos = (lba * BS) / 8;
-rel_bitpos = (lba * BS) % 8;  // counted from the left side of an byte; zero means the left most bit in a byte
+bytepos = lba / 8;
+rel_bitpos = lba % 8;  // counted from the left side of an byte; zero means the left most bit in a byte
 ----
 
 When implementing this, remember that the further left a bit stands, the higher its numerical value:
@@ -107,21 +178,20 @@ When implementing this, remember that the further left a bit stands, the higher 
 
 An BAT is build as following:
 ```
-+=================+========+==============+============================================+
-| name            | offset | size         | description                                |
-+=================+========+==============+============================================+
-| next_bat        | 0      | 4            | first block of the next section of the bat |
-+-----------------+--------+--------------+--------------------------------------------+
-| block_count (N) | 4      | 2            | how many blocks this BAT section spans     |
-+-----------------+--------+--------------+--------------------------------------------+
-| BAT_data        | 6      | BS - 6       | bitmap data                                |
-|                 |        | + ((N-1)*BS) |                                            |
-+-----------------+--------+--------------+--------------------------------------------+
++=================+========+=================+============================================+
+| name            | offset | size            | description                                |
++=================+========+=================+============================================+
+| next_bat        | 0      | 4               | first block of the next section of the bat |
++-----------------+--------+----------------.+--------------------------------------------+
+| block_count (N) | 4      | 2               | how many blocks this BAT section spans     |
++-----------------+--------+-----------------+--------------------------------------------+
+| BAT_data        | 6      | blockSize*N - 6 | bitmap data                                |
++-----------------+--------+-----------------+--------------------------------------------+
 ```
 
-The BAT uses at total 32MB of space (with an blocksize of 512), wich enables devices/partitions up to 128GB.
+The BAT uses at total 32MB of space (with an `blockSize` of 512), wich enables devices/partitions up to 128GB.
 
-NOTE: To find out when to stop allocating BAT regions (i.e. your drive/partition is going to be full), you can use the max_LBA
+NOTE: To find out when to stop allocating BAT regions (i.e. your drive/partition is going to be full), you can use the `max_LBA`
 field from the header.
 
 NOTE: When implementing this, one might find it easier to allocate the BAT completly when creating the filesystem, since you then
@@ -208,8 +278,8 @@ be enough. With this the maximum amount of space one entrytable can occupy is 4M
 
 #### Directories
 The type of entry that allows us to build a tree.
-Its data field is a LBA 28 of the first block of an entrytable and the bytesize
-of this first table; the size must be divideable through `512*BS`.
+Its data field is a LBA 28 of the first block of the first section of it's entrytable and the bytesize
+of this first section; the size must be divideable through `blockSize`.
 
 #### FAT files
 These files use an File Allocation Table or FAT to store the addresses to their
@@ -423,13 +493,13 @@ Tabfs is designed for osdev-ing. all 3 types work differently, and people have d
 A: Tabfs is also designed in mind that osdever's might want to use or write their own bootstrap code. I personally even recommend to do so, so you can understand the x86 boot sequence better! And because bootstrap/bootloader code tends to be assembler heavy and you might dont want to implement device drivers and an stub fs-driver for your bootloader, tabfs has a kernel type. Its easier just to search the first block of the root entrytabe after 0xF?.
 
 ### Q: Why LBA 28? why not LBA 48?
-With LBA 28 and an blocksize of 512 we can address 128GB of space. I doubt that any osdever ever generate an imgage this big. And LBA 28 (or better: 32 bit / 4 byte) fitted more nicely into the structures when i first designed this filesystem. Note however that the TABFS header already supports LBA 48, so an future TABFS-48 is not from the table :3 And you can always increase your BS field at the creation so you can have access to more blocks. Note however that this does not change per-file-limitations!
+With LBA 28 and an `blockSize` of 512 we can address 128GB of space. I doubt that any osdever ever generate an imgage this big. And LBA 28 (or better: 32 bit / 4 byte) fitted more nicely into the structures when I first designed this filesystem. Note however that the TABFS header already supports LBA 48, so an future TABFS-48 is not from the table :3 And you can always increase your `BS`/`blockSize` field at the creation so you can have access to more blocks. Note however that this does not change per-file-limitations!
 
 ### Q: Why 64bit timestamps? are 32bit not enough for osdev purposes?
 https://en.wikipedia.org/wiki/Year_2038_problem
 
 ### Q: Where comes the name "tabfs" from?
-Its comes form its first implementation: an simple 1-sector big table with 32 byte entrys. However, given its simple structure it's only supported continious files. No special files, not even directorys. So i reworked it into this.
+Its comes form its first implementation: an simple 1-sector big table with 32 byte entrys. However, given its simple structure it's only supported continious files. No special files, not even directorys. So I reworked it into this.
 
 ### Q: Can i use tabfs in my (commercial) project(s)?
 See the link:LICENSE[] for detailed information!

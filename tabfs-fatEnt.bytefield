@@ -4,6 +4,10 @@
 (defattrs :bg-cyan {:fill "#a0fafa"})
 (defattrs :bg-purple {:fill "#e4b5f7"})
 
+(def svg-attrs {:style "background-color: white"})
+(def right-margin 8)
+(def bottom-margin 8)
+
 (draw-column-headers)
 (draw-box "index" {:span 4})
 (draw-box "lba" {:span 4})

@@ -76,13 +76,13 @@ def build_diagrams(ad_file)
                 svg.at('svg').children.first.add_previous_sibling('<rect width="100%" height="100%" fill="white"/>');
 
                 # make a little more space at both axes so the lines are more visible
-                w = svg.at('svg').get_attribute("width").to_i + 10;
-                svg.at('svg').set_attribute("width", w.to_s);
+                # w = svg.at('svg').get_attribute("width").to_i + 10;
+                # svg.at('svg').set_attribute("width", w.to_s);
 
-                h = svg.at('svg').get_attribute("height").to_i + 10;
-                svg.at('svg').set_attribute("height", h.to_s);
+                # h = svg.at('svg').get_attribute("height").to_i + 10;
+                # svg.at('svg').set_attribute("height", h.to_s);
 
-                svg.at('svg').set_attribute("viewBox", "0 0 #{w} #{h}");
+                # svg.at('svg').set_attribute("viewBox", "0 0 #{w} #{h}");
 
                 svg_code = svg.to_xml();
             end

@@ -1,0 +1,60 @@
+(defattrs :bg-green {:fill "#a0ffa0"})
+(defattrs :bg-yellow {:fill "#ffffa0"})
+(defattrs :bg-pink {:fill "#ffb0a0"})
+(defattrs :bg-cyan {:fill "#a0fafa"})
+(defattrs :bg-purple {:fill "#e4b5f7"})
+
+(def svg-attrs {:style "background-color: white"})
+(def right-margin 8)
+(def bottom-margin 8)
+
+(def g_gap_count 0)
+(defn row-header-fn
+    [{:keys [address gap?]}]
+    (let [
+            defs        ()
+            attr-spec   (:row-header defs)
+            hex         (merge (:hex defs) {
+                                :font-size 11
+                                :font-style "normal"
+                                :dominant-baseline "middle"}
+                            attr-spec)
+            math        (merge (:math defs) 
+                            (select-keys hex [:font-size :dominant-baseline])
+                        )
+        ]
+        (if gap?
+            (def g_gap_count (+ g_gap_count 1))
+        )
+        (if (> g_gap_count 1)
+            ; g_gap_count is 1+
+            (hex-text (+ address 256) 2 hex)
+
+            ; g_gap_count is 0
+            (if gap? (text "") (hex-text address 2 hex))
+        )
+    )
+)
+
+(draw-column-headers)
+
+(draw-box (text "magic") [:bg-green {:span 16}])
+
+(draw-box (text "bat LBA" ) [:bg-pink {:span 4}])
+(draw-box (text "min LBA" ) [:bg-pink {:span 4}])
+(draw-box (text "bat-start LBA" ) [:bg-pink {:span 4}])
+(draw-box (text "max LBA" ) [:bg-pink {:span 4}])
+
+(draw-box (text "blockSize" ) [:box-first :bg-purple {:span 4}])
+(draw-box (text "BS" ) [:box-last :bg-purple {:span 1}])
+(draw-padding 0x26)
+(draw-box (text "flags" ) [{:span 2}])
+(draw-box (text "root LBA") [:bg-yellow :box-first {:span 4}])
+(draw-box (text "root-size") [:bg-yellow :box-last {:span 4}])
+
+(draw-padding 0x50)
+
+(draw-gap "volume label")
+(draw-gap "private data")
+
+(draw-bottom)
