@@ -35,33 +35,33 @@ toc::[]
 The first sector of an partition must contain an valid TABFS header:
 
 ```
-+=================+===============+======+============================================+
-| name            | offset        | size | description                                |
-+=================+===============+======+============================================+
-| TABFS_magic     | 448 / 0x1C0   | 16   | "TABFS-28" (zero-terminated)               |
-|                 |               |      | or if you prefer numeric:                  |
-|                 |               |      | 0x1C0: 0x38322D5346424154                  |
-|                 |               |      | 0x1C8: 0x0000000000000000                  |
-|                 |               |      |                                            |
-|                 |               |      | This field is 16 bytes, so custom versions |
-|                 |               |      | have enough space to encode their own magic|
-+-----------------+---------------+------+--------------------------------------------+
-| private_data    | 464 / 0x1D0   | 32   | Private data; can be used for custom use   |
-+-----------------+---------------+------+--------------------------------------------+
-| flags           | 496 / 0x1F0   | 2    | Flags for the filesystem:                  |
-|                 |               |      |   00000000 0000000A                        |
-|                 |               |      | A: If set, the lba's of the filesystem     |
-|                 |               |      |    are absolute; if cleared, they are      |
-|                 |               |      |    partition based                         |
-+-----------------+---------------+------+--------------------------------------------+
-|                 | 498 / 0x1F2   | 4    | Four unused bytes                          |
-+-----------------+---------------+------+--------------------------------------------+
-| info_LBA        | 500 / 0x1F6   | 8    | The LBA of the volume information block.   |
-|                 |               |      | Dependent on the version of TABFS, only    |
-|                 |               |      | the first 28 or 48 bits are used           |
-+-----------------+---------------+------+--------------------------------------------+
-| boot-signature  | 510 / 0x1FE   | 2    | 0xAA55, normal x86 boot signature          |
-+-----------------+---------------+------+--------------------------------------------+
++=================+==============+======+============================================+
+| name            | offset       | size | description                                |
++=================+==============+======+============================================+
+| TABFS_magic     | 448 / 0x1C0  | 16   | "TABFS-28" (zero-terminated)               |
+|                 |              |      | or if you prefer numeric:                  |
+|                 |              |      | 0x1C0: 0x38322D5346424154                  |
+|                 |              |      | 0x1C8: 0x0000000000000000                  |
+|                 |              |      |                                            |
+|                 |              |      | This field is 16 bytes, so custom versions |
+|                 |              |      | have enough space to encode their own magic|
++-----------------+--------------+------+--------------------------------------------+
+| private_data    | 464 / 0x1D0  | 32   | Private data; can be used for custom use   |
++-----------------+--------------+------+--------------------------------------------+
+| flags           | 496 / 0x1F0  | 2    | Flags for the filesystem:                  |
+|                 |              |      |   00000000 0000000A                        |
+|                 |              |      | A: If set, the lba's of the filesystem     |
+|                 |              |      |    are absolute; if cleared, they are      |
+|                 |              |      |    partition based                         |
++-----------------+--------------+------+--------------------------------------------+
+|                 | 498 / 0x1F2  | 4    | Four unused bytes                          |
++-----------------+--------------+------+--------------------------------------------+
+| info_LBA        | 500 / 0x1F6  | 8    | The LBA of the volume information block.   |
+|                 |              |      | Dependent on the version of TABFS, only    |
+|                 |              |      | the first 28 or 48 bits are used           |
++-----------------+--------------+------+--------------------------------------------+
+| boot-signature  | 510 / 0x1FE  | 2    | 0xAA55, normal x86 boot signature          |
++-----------------+--------------+------+--------------------------------------------+
 ```
 
 ifdef::env-github[]
@@ -77,64 +77,64 @@ endif::[]
 ### Volume Information Block
 
 ```
-+=================+===============+======+============================================+
-| name            | offset        | size | description                                |
-+=================+===============+======+============================================+
-| TABFS_magic     | 0x0000        | 16   | "TABFS-28" (zero-terminated)               |
-|                 |               |      | or if you prefer numeric:                  |
-|                 |               |      | 0x000: 0x38322D5346424154                  |
-|                 |               |      | 0x008: 0x0000000000000000                  |
-|                 |               |      |                                            |
-|                 |               |      | This field is 16 bytes, so custom versions |
-|                 |               |      | have enough space to encode their own magic|
-|                 |               |      |                                            |
-|                 |               |      | This is actually a copy of the magic found |
-|                 |               |      | in the header inside the bootsector        |
-+-----------------+---------------+------+--------------------------------------------+
-| bat_LBA         | 0x0010        | 4    | The LBA 28 of the first block of the BAT   |
-+-----------------+---------------+------+--------------------------------------------+
-| min_LBA         | 0x0014        | 4    | The min LBA of the filesystem, including   |
-|                 |               |      | any preload (this info section, bootloader |
-|                 |               |      | or else)                                   |
-+-----------------+---------------+------+--------------------------------------------+
-| bat_start_LBA   | 0x0018        | 4    | The first LBA the BAT is allowed to use    |
-+-----------------+---------------+------+--------------------------------------------+
-| max_LBA         | 0x001C        | 4    | The max LBA (inclusive) that is allowed to |
-|                 |               |      | be used by tabfs. It's also the max LBA    |
-|                 |               |      | that an BAT can hold informations about    |
-+-----------------+---------------+------+--------------------------------------------+
-| blockSize       | 0x0020        | 4    | The absolute bytesize of an block.         |
-|                 |               |      | For example: for ATA this would be 512     |
-|                 |               |      | This size must not be the physical size,   |
-|                 |               |      | but it should be an multiple of it.        |
-+-----------------+---------------+------+--------------------------------------------+
-| BS              | 0x0024        | 1    | Count of multiplies of an physical block   |
-|                 |               |      | to make an block. Used to calculate LBA's  |
-+-----------------+---------------+------+--------------------------------------------+
-|                 | 0x0025        | 1    | Unused byte                                |
-+-----------------+---------------+------+--------------------------------------------+
-| flags           | 0x0026        | 2    | Flags for the filesystem:                  |
-|                 |               |      |   00000000 0000000A                        |
-|                 |               |      | A: if set, the lba's of the filesystem     |
-|                 |               |      |    are absolute; if cleared, they are      |
-|                 |               |      |    partition based                         |
-|                 |               |      |                                            |
-|                 |               |      | This is actually a copy of the flags found |
-|                 |               |      | in the header inside the bootsector        |
-+-----------------+---------------+------+--------------------------------------------+
-| root_LBA        | 0x0028        | 4    | The LBA of the first block of the first |
-|                 |               |      | section of the root entrytable.            |
-+-----------------+---------------+------+--------------------------------------------+
-| root_size       | 0x002C        | 4    | tablesize; for limitations and usage see   |
-|                 |               |      | directorys; belongs to root_LBA            |
-+-----------------+---------------+------+--------------------------------------------+
-|                 | 0x0030        | 32   | Reserved for future usage                  |
-+-----------------+---------------+------+--------------------------------------------+
-| volume_label    | 0x0050        | 176  | Zero-terminated string of the label for    |
-|                 |               |      | this volume.                               |
-+-----------------+---------------+------+--------------------------------------------+
-| private data    | 0x0100        | 256  | Private data; can be used for custom use   |
-+-----------------+---------------+------+--------------------------------------------+
++=================+==============+======+============================================+
+| name            | offset       | size | description                                |
++=================+==============+======+============================================+
+| TABFS_magic     | 0x0000       | 16   | "TABFS-28" (zero-terminated)               |
+|                 |              |      | or if you prefer numeric:                  |
+|                 |              |      | 0x000: 0x38322D5346424154                  |
+|                 |              |      | 0x008: 0x0000000000000000                  |
+|                 |              |      |                                            |
+|                 |              |      | This field is 16 bytes, so custom versions |
+|                 |              |      | have enough space to encode their own magic|
+|                 |              |      |                                            |
+|                 |              |      | This is actually a copy of the magic found |
+|                 |              |      | in the header inside the bootsector        |
++-----------------+--------------+------+--------------------------------------------+
+| bat_LBA         | 0x0010       | 4    | The LBA 28 of the first block of the BAT   |
++-----------------+--------------+------+--------------------------------------------+
+| min_LBA         | 0x0014       | 4    | The min LBA of the filesystem, including   |
+|                 |              |      | any preload (this info section, bootloader |
+|                 |              |      | or else)                                   |
++-----------------+--------------+------+--------------------------------------------+
+| bat_start_LBA   | 0x0018       | 4    | The first LBA the BAT is allowed to use    |
++-----------------+--------------+------+--------------------------------------------+
+| max_LBA         | 0x001C       | 4    | The max LBA (inclusive) that is allowed to |
+|                 |              |      | be used by tabfs. It's also the max LBA    |
+|                 |              |      | that an BAT can hold informations about    |
++-----------------+--------------+------+--------------------------------------------+
+| blockSize       | 0x0020       | 4    | The absolute bytesize of an block.         |
+|                 |              |      | For example: for ATA this would be 512     |
+|                 |              |      | This size must not be the physical size,   |
+|                 |              |      | but it should be an multiple of it.        |
++-----------------+--------------+------+--------------------------------------------+
+| BS              | 0x0024       | 1    | Count of multiplies of an physical block   |
+|                 |              |      | to make an block. Used to calculate LBA's  |
++-----------------+--------------+------+--------------------------------------------+
+|                 | 0x0025       | 1    | Unused byte                                |
++-----------------+--------------+------+--------------------------------------------+
+| flags           | 0x0026       | 2    | Flags for the filesystem:                  |
+|                 |              |      |   00000000 0000000A                        |
+|                 |              |      | A: if set, the lba's of the filesystem     |
+|                 |              |      |    are absolute; if cleared, they are      |
+|                 |              |      |    partition based                         |
+|                 |              |      |                                            |
+|                 |              |      | This is actually a copy of the flags found |
+|                 |              |      | in the header inside the bootsector        |
++-----------------+--------------+------+--------------------------------------------+
+| root_LBA        | 0x0028       | 4    | The LBA of the first block of the first    |
+|                 |              |      | section of the root entrytable.            |
++-----------------+--------------+------+--------------------------------------------+
+| root_size       | 0x002C       | 4    | tablesize; for limitations and usage see   |
+|                 |              |      | directorys; belongs to root_LBA            |
++-----------------+--------------+------+--------------------------------------------+
+|                 | 0x0030       | 32   | Reserved for future usage                  |
++-----------------+--------------+------+--------------------------------------------+
+| volume_label    | 0x0050       | 176  | Zero-terminated string of the label for    |
+|                 |              |      | this volume.                               |
++-----------------+--------------+------+--------------------------------------------+
+| private data    | 0x0100       | 256  | Private data; can be used for custom use   |
++-----------------+--------------+------+--------------------------------------------+
 ```
 
 ifdef::env-github[]
@@ -179,15 +179,15 @@ When implementing this, remember that the further left a bit stands, the higher 
 
 An BAT is build as following:
 ```
-+=================+========+=================+============================================+
-| name            | offset | size            | description                                |
-+=================+========+=================+============================================+
-| next_bat        | 0      | 4               | first block of the next section of the bat |
-+-----------------+--------+----------------.+--------------------------------------------+
-| block_count (N) | 4      | 2               | how many blocks this BAT section spans     |
-+-----------------+--------+-----------------+--------------------------------------------+
-| BAT_data        | 6      | blockSize*N - 6 | bitmap data                                |
-+-----------------+--------+-----------------+--------------------------------------------+
++=================+========+=================+====================================+
+| name            | offset | size            | description                        |
++=================+========+=================+====================================+
+| next_bat        | 0      | 4               | first block of the next section    |
++-----------------+--------+----------------.+------------------------------------+
+| block_count (N) | 4      | 2               | how many blocks this section spans |
++-----------------+--------+-----------------+------------------------------------+
+| BAT_data        | 6      | blockSize*N - 6 | bitmap data                        |
++-----------------+--------+-----------------+------------------------------------+
 ```
 
 The BAT uses at total 32MB of space (with an `blockSize` of 512), wich enables devices/partitions up to 128GB.
