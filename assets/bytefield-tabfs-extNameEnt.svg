@@ -73,20 +73,30 @@
   <line x1="440" y1="75" x2="680" y2="75" stroke="#000000" stroke-width="1"/>
   <line x1="680" y1="75" x2="680" y2="105" stroke="#000000" stroke-width="1"/>
   <line x1="440" y1="75" x2="440" y2="105" stroke="#000000" stroke-width="1"/>
+  <text font-size="18" font-family="Palatino, Georgia, Times New Roman, serif" x="560" y="91" text-anchor="middle" dominant-baseline="middle">unused</text>
   <text font-size="11" font-family="Courier New, monospace" font-style="normal" dominant-baseline="middle" x="35" y="120" text-anchor="end">30</text>
-  <rect x="40" y="105" height="30" width="400" fill="#e4b5f7"/>
-  <line x1="40" y1="105" x2="440" y2="105" stroke="#000000" stroke-width="1"/>
-  <line x1="40" y1="135" x2="440" y2="135" stroke="#000000" stroke-width="1"/>
+  <rect x="40" y="105" height="30" width="120" fill="#e4b5f7"/>
+  <line x1="40" y1="105" x2="160" y2="105" stroke="#000000" stroke-width="1"/>
+  <line x1="40" y1="135" x2="160" y2="135" stroke="#000000" stroke-width="1"/>
   <line x1="40" y1="105" x2="40" y2="135" stroke="#000000" stroke-width="1"/>
-  <text font-size="18" font-family="Palatino, Georgia, Times New Roman, serif" x="240" y="121" text-anchor="middle" dominant-baseline="middle">unused</text>
-  <rect x="440" y="105" height="30" width="40" fill="#e4b5f7"/>
-  <line x1="440" y1="135" x2="480" y2="135" stroke="#000000" stroke-width="1"/>
-  <line x1="480" y1="105" x2="480" y2="135" stroke="#000000" stroke-width="1"/>
+  <text font-size="18" font-family="Palatino, Georgia, Times New Roman, serif" x="100" y="121" text-anchor="middle" dominant-baseline="middle">unused</text>
+  <rect x="160" y="105" height="30" width="160" fill="#a0fafa"/>
+  <line x1="160" y1="105" x2="320" y2="105" stroke="#000000" stroke-width="1"/>
+  <line x1="160" y1="135" x2="320" y2="135" stroke="#000000" stroke-width="1"/>
+  <line stroke-dasharray="1,3" x1="320" y1="105" x2="320" y2="135" stroke="#000000" stroke-width="1"/>
+  <line x1="160" y1="105" x2="160" y2="135" stroke="#000000" stroke-width="1"/>
+  <text font-size="18" font-family="Palatino, Georgia, Times New Roman, serif" x="240" y="121" text-anchor="middle" dominant-baseline="middle">longName-lba</text>
+  <rect x="320" y="105" height="30" width="160" fill="#a0fafa"/>
+  <line x1="320" y1="105" x2="480" y2="105" stroke="#000000" stroke-width="1"/>
+  <line x1="320" y1="135" x2="480" y2="135" stroke="#000000" stroke-width="1"/>
+  <line stroke-dasharray="1,3" x1="480" y1="105" x2="480" y2="135" stroke="#000000" stroke-width="1"/>
+  <line stroke-dasharray="1,3" x1="320" y1="105" x2="320" y2="135" stroke="#000000" stroke-width="1"/>
+  <text font-size="18" font-family="Palatino, Georgia, Times New Roman, serif" x="400" y="121" text-anchor="middle" dominant-baseline="middle">longName-lba-sz</text>
   <rect x="480" y="105" height="30" width="160" fill="#a0fafa"/>
   <line x1="480" y1="105" x2="640" y2="105" stroke="#000000" stroke-width="1"/>
   <line x1="480" y1="135" x2="640" y2="135" stroke="#000000" stroke-width="1"/>
   <line stroke-dasharray="1,3" x1="640" y1="105" x2="640" y2="135" stroke="#000000" stroke-width="1"/>
-  <line x1="480" y1="105" x2="480" y2="135" stroke="#000000" stroke-width="1"/>
+  <line stroke-dasharray="1,3" x1="480" y1="105" x2="480" y2="135" stroke="#000000" stroke-width="1"/>
   <text font-size="18" font-family="Palatino, Georgia, Times New Roman, serif" x="560" y="121" text-anchor="middle" dominant-baseline="middle">longName-offset</text>
   <rect x="640" y="105" height="30" width="40" fill="#a0fafa"/>
   <line x1="640" y1="105" x2="680" y2="105" stroke="#000000" stroke-width="1"/>

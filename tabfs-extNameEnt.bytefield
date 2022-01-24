@@ -20,16 +20,17 @@
 
 (draw-box (text "gid" [:math] [:sub "hi"]) [:box-last :bg-green {:span 2}])
 (draw-box "data" {:span 8})
-(draw-box nil [:box-above :bg-purple {:span 6}])
+(draw-box "unused" [:box-above :bg-purple {:span 6}])
 
 (draw-box "unused" [:bg-purple {
-    :span 10
+    :span 3
     :borders {
         :left :border-unrelated
         :top :border-unrelated
         :bottom :border-unrelated
     }
 }])
-(draw-box nil [:bg-purple {:borders { :right :border-unrelated :bottom :border-unrelated }}])
-(draw-box "longName-offset" [:bg-cyan :box-first {:span 4}])
+(draw-box "longName-lba" [:bg-cyan :box-first {:span 4}])
+(draw-box "longName-lba-sz" [:bg-cyan :box-related {:span 4}])
+(draw-box "longName-offset" [:bg-cyan :box-related {:span 4}])
 (draw-box (text ">0") [:bg-cyan :box-last])

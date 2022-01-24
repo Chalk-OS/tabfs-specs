@@ -18,6 +18,7 @@ endif::[]
 //$AUTOBUILD tabfs-fat.bytefield
 //$AUTOBUILD tabfs-fatEnt.bytefield
 //$AUTOBUILD tabfs-volumeInfo.bytefield
+//$AUTOBUILD tabfs-tableinfo-entry.bytefield
 
 # TABFS-28
 
@@ -206,13 +207,13 @@ Each directory as an entrytable which consits of entrys with the following forma
 | name            | offset | size  | description                                |
 +=================+========+=======+============================================+
 | flags           | 0      | 2     | flags for this entry:                      |
-|                 |        |       | TTTTUGSAAAAAAAAA                           |
+|                 |        |       | TTTTUGSA AAAAAAAA                          |
 |                 |        |       | - A = acl                                  |
 |                 |        |       |   - RWX:U RWX:G RWX:O (hi to low)          |
 |                 |        |       | - S = sticky bit                           |
 |                 |        |       | - U/G = set-user-id/set-group-id bit       |
 |                 |        |       | - T = type                                 |
-|                 |        |       |   - 0: unknown / entry is not valid        |
+|                 |        |       |   - 0: entry is not valid (free)           |
 |                 |        |       |   - 1: directory                           |
 |                 |        |       |   - 2: regular FAT file                    |
 |                 |        |       |        uses a FAT to track blocks          |
@@ -227,7 +228,7 @@ Each directory as an entrytable which consits of entrys with the following forma
 |                 |        |       |        file is just one a group of blocks  |
 |                 |        |       |   - A: long name                           |
 |                 |        |       |   - B-D: not used; free for extensions!    |
-|                 |        |       |   - E: next-link entry                     |
+|                 |        |       |   - E: tableinfo entry                     |
 |                 |        |       |   - F: kernel; is a continuous file        |
 +-----------------+--------+-------+--------------------------------------------+
 | ctime           | 2      | 8     | creating time as a u64 timestamp           |
@@ -241,16 +242,15 @@ Each directory as an entrytable which consits of entrys with the following forma
 | gid             | 30     | 4     | u32 groupid                                |
 +-----------------+--------+-------+--------------------------------------------+
 | data            | 34     | 8     | usage depents on the type:                 |
-|                 |        |       | - dir/file/kernel/next-link:               |
+|                 |        |       | - dir/file/kernel:                         |
 |                 |        |       |   - LBA 28 of first block                  |
 |                 |        |       |   - 32bit file-/tablesize in bytes         |
 |                 |        |       | - char/blk-dev:                            |
 |                 |        |       |   - 32bit device id                        |
 |                 |        |       |   - 32bit device flags                     |
 |                 |        |       | - sock: ipv4 address / socket serial num   |
-|                 |        |       | - link:                                    |
-|                 |        |       |   - LBA 28 of the entrytable               |
-|                 |        |       |   - 32 bit offset in bytes                 |
+|                 |        |       | - symlink:                                 |
+|                 |        |       |   - 32 bit offset                          |
 |                 |        |       | - fifo:                                    |
 |                 |        |       |   - 32bit buffer size in bytes             |
 +-----------------+--------+-------+--------------------------------------------+
@@ -268,13 +268,16 @@ include::tabfs-genericEnt.bytefield[]
 ....
 endif::[]
 
-An entry table can at max have 67.108.864 entrys (across links). This limitation
-comes from the 32bit offset for links. However this would occupy 4GB of space per full directory!
+NOTE: the above layout is the generic layout; for special entrys (longname, tableinfo),
+this dosnt applies, and they have their destinct layout. For more information about them
+and their layout, see below.
 
-Implementation Tip:
-Because 4GB only for entrys in an folder is way to much for an hobby OS, its better
-to reduce the number of allowed entries; an hard max of 65.536 entrys (16bit offset) per table should
-be enough. With this the maximum amount of space one entrytable can occupy is 4MB.
+An entrytable itself has no limitation on how many entries it can hold, since there is no
+limitation about how many sections an entrytable can have.
+
+The only limitation are offsets for symlinks, since they only store an offset for the path
+of theit target. This entry can only be `2 ^ 32` entries (across sections) after the symlink itself!
+However this would mean 256GB of entries inbetween them!
 
 #### Directories
 The type of entry that allows us to build a tree.
@@ -419,13 +422,11 @@ Just what their name says:
 - socket: either an unix-socket (or named pipe) or an tcp4 socket file. The later is 
           not required.
 
-#### link (or symlink)
+#### symlink
 An symlink links to another entry inside the filesystem.
-Their data consists of an LBA 28 that points to the first block of an entrytable
-as well as an offset into this entrytable.
 
-NOTE: It dosn't neccessarily need to be the first block of an entrytable; but some
-      performance and cache strategies may only work when useing the first block.
+Their data consists of an 32 bit offset relative to the current section of the entry table
+to an long-name entry, wich holds the path to the link's target.
 
 #### kernel
 This is just an alias for an continous files; but its id can be used by an custom
@@ -434,10 +435,41 @@ bootstrap/bootloader code to quickly find the kernel file.
 Thats also why the kernel file needs to be in the first block of the root
 entrytable!
 
-#### next-link entry
-An special entry in each section of an entrytable to specify the next section of an
-entrytable! The data field contains an LBA 28 for the first block of the next section,
-as well as an u32 tablesize (same restrictions and usage as for the directories).
+#### tableinfo entry
+An special entry in each section of an entrytable to specify some informations about an entrytable!
+In acts like an header for the entrytable.
+
+```
++=================+========+=======+============================================+
+| name            | offset | size  | description                                |
++=================+========+=======+============================================+
+| flags           | 0      | 1     | Flags for this entry:                      |
+|                 |        |       | TTTT---                                    |
++-----------------+--------+-------+--------------------------------------------+
+|                 | 1      | 39    | unused                                     |
++-----------------+--------+-------+--------------------------------------------+
+| parent_lba      | 40     | 4     | LBA 28 of the first section of the parent  |
++-----------------+--------+-------+--------------------------------------------+
+| parent_size     | 44     | 4     | bytesize of the first section of the parent|
++-----------------+--------+-------+--------------------------------------------+
+| prev_lba        | 48     | 4     | LBA 28 of the previous section             |
++-----------------+--------+-------+--------------------------------------------+
+| prev_size       | 52     | 4     | bytesize of the previous section           |
++-----------------+--------+-------+--------------------------------------------+
+| next_lba        | 56     | 4     | LBA 28 of the next section                 |
++-----------------+--------+-------+--------------------------------------------+
+| next_size       | 60     | 4     | bytesize of the next section               |
++-----------------+--------+-------+--------------------------------------------+
+```
+ifdef::env-github[]
+image::bytefield-tabfs-tableinfo-entry.svg[]
+endif::[]
+ifndef::env-github[]
+[bytefield]
+....
+include::tabfs-tableinfo-entry.bytefield[]
+....
+endif::[]
 
 Should be the first entry in each entrytable, so we dont need to search if we want
 more sections.
@@ -451,24 +483,30 @@ Its built like this:
 +=================+========+=======+============================================+
 | name            | offset | size  | description                                |
 +=================+========+=======+============================================+
-| flags           | 0      | 1     | flags for this entry:                      |
+| flags           | 0      | 1     | Flags for this entry:                      |
 |                 |        |       | TTTT---                                    |
 +-----------------+--------+-------+--------------------------------------------+
-| name            | 1      | 63    | zero-terminated name                       |
+| name            | 1      | 63    | Zero-terminated name                       |
 +-----------------+--------+-------+--------------------------------------------+
 ```
 
-To use it, we change the <name> field in the normal entry from an simple 22 byte long zero-terminated string into:
+To use it, we change the `name` field in the normal entry from an simple 22 byte long zero-terminated string into:
 
 ```
 | ...                                                                           |
 +-----------------+--------+-------+--------------------------------------------+
-| name_old        | 42     | 17    | not used by the extension; free to use     |
+| name_old        | 42     | 9     | Not used by the extension; free to use     |
 +-----------------+--------+-------+--------------------------------------------+
-| longname-offset | 59     | 4     | offset into the entrytable to the          |
-|                 |        |       | long-name-ext                              |
+| longname-lba    | 51     | 4     | LBA 28 of the entrytable section that      |
+|                 |        |       | holds the long-name-ext                    |
 +-----------------+--------+-------+--------------------------------------------+
-| longname-byte   | 63     | 1     | non-zero; indicates that a long-name-ext   |
+| longname-lba-sz | 55     | 4     | bytesize of the entrytable refered to by   |
+|                 |        |       | the longname-lba field                     |
++-----------------+--------+-------+--------------------------------------------+
+| longname-offset | 59     | 4     | Offset into the entrytable section         |
+|                 |        |       | to the long-name-ext                       |
++-----------------+--------+-------+--------------------------------------------+
+| longname-byte   | 63     | 1     | Non-zero; indicates that a long-name-ext   |
 |                 |        |       | is used!                                   |
 +-----------------+--------+-------+--------------------------------------------+
 ```
@@ -497,6 +535,12 @@ With LBA 28 and an `blockSize` of 512 we can address 128GB of space. I doubt tha
 
 ### Q: Why 64bit timestamps? are 32bit not enough for osdev purposes?
 https://en.wikipedia.org/wiki/Year_2038_problem
+
+### Q: Where are the hardlinks?
+Nowhere; hardlinks can be very confusing, in usage as well as in implementation since you have multiple "users"
+of an dataregion (entrytable, fat-table or even only an range of blocks).
+Implementing them ment that we would need an additional layer inbetween; ext2 calls them inodes.
+So I designed tabfs to only contain one type: symlinks!
 
 ### Q: Where comes the name "tabfs" from?
 Its comes form its first implementation: an simple 1-sector big table with 32 byte entrys. However, given its simple structure it's only supported continious files. No special files, not even directorys. So I reworked it into this.
