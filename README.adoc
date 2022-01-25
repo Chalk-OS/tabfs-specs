@@ -31,6 +31,11 @@ toc::[]
 
 ## The specification
 
+IMPORTANT: Bitfields (flags) do not utilize the endianess used in all other numbers; their storage is always big-endian,
+meaning the further left an byte of these fields stands, the lower it's address. For example: `00000000 00000000`, here the
+first group of zeros/bits (until the space) is one byte. Its address is one lower than the other group of zeros/bits.
+Inside an byte itself, the further an bit is to the left, the higher it is. Meaning the value of `100000000` is `0x80`.
+
 ### TABFS-header
 The first sector of an partition must contain an valid TABFS header:
 
@@ -49,10 +54,13 @@ The first sector of an partition must contain an valid TABFS header:
 | private_data    | 464 / 0x1D0  | 32   | Private data; can be used for custom use   |
 +-----------------+--------------+------+--------------------------------------------+
 | flags           | 496 / 0x1F0  | 2    | Flags for the filesystem:                  |
-|                 |              |      |   00000000 0000000A                        |
+|                 |              |      |   00000000 000000EA                        |
 |                 |              |      | A: If set, the lba's of the filesystem     |
 |                 |              |      |    are absolute; if cleared, they are      |
 |                 |              |      |    partition based                         |
+|                 |              |      | E: If set, the endianess of the filesystem |
+|                 |              |      |    is big-endian; if cleared, it uses      |
+|                 |              |      |    little-endian (not for bitfields)       |
 +-----------------+--------------+------+--------------------------------------------+
 |                 | 498 / 0x1F2  | 4    | Four unused bytes                          |
 +-----------------+--------------+------+--------------------------------------------+
@@ -114,10 +122,13 @@ endif::[]
 |                 | 0x0025       | 1    | Unused byte                                |
 +-----------------+--------------+------+--------------------------------------------+
 | flags           | 0x0026       | 2    | Flags for the filesystem:                  |
-|                 |              |      |   00000000 0000000A                        |
-|                 |              |      | A: if set, the lba's of the filesystem     |
+|                 |              |      |   00000000 000000EA                        |
+|                 |              |      | A: If set, the lba's of the filesystem     |
 |                 |              |      |    are absolute; if cleared, they are      |
 |                 |              |      |    partition based                         |
+|                 |              |      | E: If set, the endianess of the filesystem |
+|                 |              |      |    is big-endian; if cleared, it uses      |
+|                 |              |      |    little-endian (not for bitfields)       |
 |                 |              |      |                                            |
 |                 |              |      | This is actually a copy of the flags found |
 |                 |              |      | in the header inside the bootsector        |
