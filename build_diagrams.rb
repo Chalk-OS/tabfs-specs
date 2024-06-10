@@ -26,6 +26,7 @@ end
 def build_diagrams(ad_file)
     build_files = [];
     outputDir = "";
+    dirname = File.absolute_path(File.dirname(ad_file));
 
     puts "Processing #{ad_file} ..."
 
@@ -33,8 +34,8 @@ def build_diagrams(ad_file)
         line.strip!
         if (line.start_with?("//")) then
             m = line.match(/\$AUTOBUILD ([\.A-Za-z0-9\-_]+)/);
-            if (m != nil && File.exists?(m[1])) then
-                build_files.push(m[1]);
+            if (m != nil && File.exists?(File.join(dirname, m[1]))) then
+                build_files.push(File.join(dirname, m[1]));
             else
                 m = line.match(/\$AUTOBUILDOUT ([A-Za-z0-9\-_]+)/);
                 if (m != nil && Dir.exists?(m[1])) then
@@ -44,7 +45,6 @@ def build_diagrams(ad_file)
         end
     end
 
-    dirname = File.absolute_path(File.dirname(ad_file));
     outputDir = File.absolute_path(File.join(dirname, outputDir));
     if (!outputDir.start_with?(dirname)) then
         puts("- invalid output dir: #{outputDir}! setting to default #{dirname}/assets");
