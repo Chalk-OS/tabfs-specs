@@ -22,7 +22,7 @@ endif::[]
 
 # TABFS-28
 
-[caption="",title="This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License",rel="license",link=http://creativecommons.org/licenses/by-sa/4.0/]
+[caption="",title="This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License; Copyright Mai-Lapyst",rel="license",link=http://creativecommons.org/licenses/by-sa/4.0/]
 image::https://i.creativecommons.org/l/by-sa/4.0/88x31.png[]
 
 Tabfs is an easy to use / easy to understand fs that is build from osdever(s) for osdever(s)!
