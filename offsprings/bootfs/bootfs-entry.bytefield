@@ -1,0 +1,22 @@
+(defattrs :bg-green {:fill "#a0ffa0"})
+(defattrs :bg-yellow {:fill "#ffffa0"})
+(defattrs :bg-pink {:fill "#ffb0a0"})
+(defattrs :bg-cyan {:fill "#a0fafa"})
+(defattrs :bg-purple {:fill "#e4b5f7"})
+
+(def svg-attrs {:style "background-color: white"})
+(def right-margin 8)
+(def bottom-margin 8)
+
+(draw-column-headers)
+(draw-box "LBA + type" {:span 4})
+(draw-box "len" {:span 1})
+(draw-box nil [:box-above :bg-purple {:span 11}])
+(draw-box "name" [:bg-purple {
+    :span 16
+    :borders {
+        :left :border-unrelated
+        :right :border-unrelated
+        :bottom :border-unrelated
+    }
+}])

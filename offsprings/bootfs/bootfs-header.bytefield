@@ -1,0 +1,55 @@
+(defattrs :bg-green {:fill "#a0ffa0"})
+(defattrs :bg-yellow {:fill "#ffffa0"})
+(defattrs :bg-pink {:fill "#ffb0a0"})
+(defattrs :bg-cyan {:fill "#a0fafa"})
+(defattrs :bg-purple {:fill "#e4b5f7"})
+(defattrs :bg-gray {:fill "#cccccc"})
+(defattrs :bg-dgray {:fill "#4a4a4a"})
+
+(def g_gap_count 0)
+
+(defn row-header-fn
+    [{:keys [address gap?]}]
+    (let [
+            defs        ()
+            attr-spec   (:row-header defs)
+            hex         (merge (:hex defs) {
+                                :font-size 11
+                                :font-style "normal"
+                                :dominant-baseline "middle"}
+                            attr-spec)
+            math        (merge (:math defs) 
+                            (select-keys hex [:font-size :dominant-baseline])
+                        )
+        ]
+        (if gap?
+            (def g_gap_count (+ g_gap_count 1))
+        )
+        (if (> g_gap_count 0)
+            ; g_gap_count is 1
+            (hex-text (+ address 496) 2 hex)
+
+            ; g_gap_count is 0
+            (if gap? (text "") (hex-text address 2 hex))
+        )
+    )
+)
+
+(def svg-attrs {:style "background-color: white"})
+(def right-margin 8)
+(def bottom-margin 8)
+
+(draw-column-headers)
+(draw-gap "bootCode")
+
+(draw-box nil [{
+    :span 2
+    :borders {
+        :left :border-unrelated
+        :right :border-unrelated
+        :bottom :border-unrelated }
+}])
+(draw-box (text "magic") [:bg-green {:span 8}])
+(draw-box (text "info LBA") [:bg-yellow :box-first {:span 4}])
+(draw-box (hex-text 0x55 2 :bold) [:box-first :bg-purple])
+(draw-box (hex-text 0xAA 2 :bold) [:box-last :bg-purple])

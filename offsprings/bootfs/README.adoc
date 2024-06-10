@@ -1,0 +1,99 @@
+:icons: font
+:source-highlighter: rouge
+:toc:
+:toc-placement!:
+:imagesdir: ./assets
+ifdef::env-github[]
+:tip-caption: :bulb:
+:note-caption: :information_source:
+:important-caption: :heavy_exclamation_mark:
+:caution-caption: :fire:
+:warning-caption: :warning:
+endif::[]
+//$AUTOBUILDOUT assets
+//$AUTOBUILD bootfs-header.bytefield
+//$AUTOBUILD bootfs-entry.bytefield
+
+# BOOTFS
+
+[caption="",title="This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License; Copyright Mai-Lapyst",rel="license",link=http://creativecommons.org/licenses/by-sa/4.0/]
+image::https://i.creativecommons.org/l/by-sa/4.0/88x31.png[]
+
+Bootfs is a offspring of tabfs that reduces it to a very limited core, perfect to use it for a boot drive in your own assembler bootloader!
+
+toc::[]
+
+## Header
+
+Like tabfs, bootfs also has an tiny header. It needs to be present at the end of the first sector of any partition.
+
+```
++================+=============+======+===================================+
+| name           | offset      | size | description                       |
++================+=============+======+===================================+
+| Magic          | 498 / 0x1F2 | 8    | "BOOTFS" (zero-terminated)        |
++----------------+-------------+------+-----------------------------------+
+| root LBA       | 506 / 0x1FA | 4    | Partition-relative LBA28 of       |
+|                |             |      | the root table.                   |
++----------------+-------------+------+-----------------------------------+
+| boot signature | 510 / 0x1FE | 2    | 0xAA55, normal x86 boot signature |
++----------------+-------------+------+-----------------------------------+
+```
+
+ifdef::env-github[]
+image::bytefield-bootfs-header.svg[]
+endif::[]
+ifndef::env-github[]
+[bytefield]
+....
+include::bootfs-header.bytefield[]
+....
+endif::[]
+
+## Root Table
+
+The location of the root table (where all files reside), can be retrieved from the header's "root LBA" field. It is only one (1) sector long and consists of entries with following 32 byte long signature:
+
+```
++============+========+======+=============================================+
+| name       | offset | size | description                                 |
++============+========+======+=============================================+
+| LBA / type | 0      | 4    | Contains the LBA and the type of the file:  |
+|            |        |      | LLLLTTTT LLLLLLLL LLLLLLLL LLLLLLLL         |
+|            |        |      | - L: LBA bits                               |
+|            |        |      | - T: type bits                              |
+|            |        |      |                                             |
+|            |        |      | When read by the cpu:                       |
+|            |        |      | - (x & 0xFF_FF_FF_F0) >> 4 : gets the lba   |
+|            |        |      | - (x & 0x00_00_00_0F) : gets the type       |
++------------+--------+------+---------------------------------------------+
+| Length     | 4      | 1    | Length of the file's linear data in sectors |
++------------+--------+------+---------------------------------------------+
+| Name       | 5      | 27   | Filename (zero terminated)                  |
++------------+--------+------+---------------------------------------------+
+```
+
+NOTE: the LBA is a partition-relative LBA28
+
+ifdef::env-github[]
+image::bytefield-bootfs-entry.svg[]
+endif::[]
+ifndef::env-github[]
+[bytefield]
+....
+include::bootfs-entry.bytefield[]
+....
+endif::[]
+
+Each file has a type. It is used to quickly find certain files:
+```
++======+=================+
+| type | description     |
++======+=================+
+| 0x0F | kernel          |
++------+-----------------+
+| 0x0E | kernel debugmap |
++------+-----------------+
+```
+
+Since each entry of the root table is 32 bytes and only ever 1 sector long, we can have up to 16 entries; 15 if you subtract one for the mandatory kernel (not mandatory by the format, but mandatory in a sense that without it, you'll have nothing to boot).

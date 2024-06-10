@@ -576,6 +576,9 @@ Not yet, but I'am working on it; when they're ready I will link them here!
 ### Q: For what purpose is the 'offsprings' folder?
 If you want to share your own version of tabfs with other but have reason to not make a own repo, you can make a pr with an new file with your own version inside this folder. And so osdever's that stumple uppon this system can maybe look into what others have suggested how the fs could work differently.
 
+### Q: It's way to complicated for an bootloader written in assembler!
+For exactly that purpose link:offsprings/bootfs[bootfs exists].
+
 ### Q: Can I help to improve the specs?
 Yes, you can always fork this repo and make your own patches. If you want to submit merge/pull request however, your patches must be contained in a file inside the 'offsprings' folder. Why? So others can follow how the foundation spec (this file) influenced it's offsprings, and so on.
 
