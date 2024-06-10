@@ -12,4 +12,18 @@ toc::[]
 
 ## Implementations
 
-No implementations to show of yet...
+### libtabfs
+
+Implements tabfs-28 as a reuseable and minimal library, perfect to be used in a osdev project!
+
+link:https://codearq.net/chalk-os/libtabfs[Sourcecode]
+
+Author(s): Mai-Lapyst
+
+### tabfs-fuse
+
+A FUSE driver for the tabfs-28 filesystem. Uses the libtabfs implementation.
+
+link:https://codearq.net/chalk-os/tabfs-fuse[Sourcecode]
+
+Author(s): Mai-Lapyst

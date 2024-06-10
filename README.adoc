@@ -571,7 +571,10 @@ All files have the same license as mentioned above: CC BY-SA 4.0 (see link:LICEN
 I don't know to be honest, but I appreciate any help to proof if it is or not. (But you might head over to one of the implementations)
 
 ### Q: Are there utils or reference implementations?
-Not yet, but I'am working on it; when they're ready I will link them here!
+[.line-through]#Not yet, but I'am working on it; when they're ready I will link them here!#
+
+It's finally ready! I've found the time and created link:https://codearq.net/chalk-os/libtabfs[libtabfs] and link:https://codearq.net/chalk-os/tabfs-fuse[tabfs-fuse]!
+(They're also listed in the link:++implementations.adoc++[] file.)
 
 ### Q: For what purpose is the 'offsprings' folder?
 If you want to share your own version of tabfs with other but have reason to not make a own repo, you can make a pr with an new file with your own version inside this folder. And so osdever's that stumple uppon this system can maybe look into what others have suggested how the fs could work differently.
